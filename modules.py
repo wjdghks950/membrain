@@ -12,6 +12,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import torch.nn.functional as F
 from parlai.core.torch_agent import Beam
 from parlai.core.dict import DictionaryAgent
+from utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 import os
 
 
@@ -262,7 +263,43 @@ class Membrain(nn.Module):
 
         return predictions, scores, cand_preds, cand_scores, encoder_states, nbest_beam_preds, nbest_beam_scores
 
+class EncoderLayer(nn.Module):
 
+    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
+        super(EncoderLayer, self).__init__()
+        self.slf_attn = MultiHeadAttention(
+                n_head, d_model, d_k, d_v, dropout=dropout)
+        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
+
+    def forward(self, enc_input, slf_attn_mask=None):
+        enc_output, enc_slf_attn = self.slf_attn(
+                enc_input, enc_input, enc_input, attn_mask=slf_attn_mask)
+        enc_output = self.pos_ffn(enc_output)
+
+        return enc_output, enc_slf_attn
+
+class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all you need""
+    def __init__(self, num_features, num_max_seq, padding_idx=0, rnn_class='lstm',
+            emb_size=512, dim_model=512, hidden_size = 1024, num_layers=6, num_heads=8,
+            d_k=64, d_v=64, dropout=0.1, bidirectional=False,
+            shared_lt=None, shared_rnn=None, sparse=False):
+
+        super(Encoder, self).__init__()
+
+        n_position = num_max_seq + 1
+        self.num_max_seq = num_max_seq
+        self.dim_model = dim_model
+
+        self.position_enc = nn.Embedding(n_position, emb_size, padding_idx=Constants.PAD)
+        self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
+        self.src_word_emb = nn.Embedding(num_features, emb_size, padding_idx=Constants.PAD)
+        self.layer_stack = nn.ModuleList([
+            EncoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout) 
+            for _ in range(n_layers)])
+
+    def forward(self, src_seq, src_pos, return_attns=False): #TODO: Implement forward
+
+"""
 class Encoder(nn.Module):
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
                  emb_size=128, hidden_size=128, num_layers=2, dropout=0.1,
@@ -318,8 +355,28 @@ class Encoder(nn.Module):
                 hidden = hidden.view(-1, self.dirs, bsz, self.hsz).max(1)[0]
 
         return encoder_output, hidden
+"""
+
+class DecoderLayer(nn.Module):
+
+    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
+        super(DecoderLayer, self).__init__()
+        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
+        self.enc_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
+        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
+
+    def forward(self, dec_input, enc_output, slf_attn_mask=None, dec_enc_attn_mask=None):
+        dec_output, dec_slf_attn = self.slf_attn(
+                dec_input, dec_input, dec_input, attn_mask=slf_attn_mask)
+        dec_output, dec_enc_attn = self.enc_attn(
+                dec_output, enc_output, enc_output, attn_mask=dec_enc_attn_mask)
+        dec_output = self.pos_ffn(dec_output)
+
+        return dec_output, dec_slf_attn, dec_enc_attn
 
 
+class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all you need""
+"""
 class Decoder(nn.Module):
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
                  emb_size=128, hidden_size=128, num_layers=2, dropout=0.1,
@@ -413,7 +470,7 @@ class Decoder(nn.Module):
         preds = idx.add_(1)
 
         return preds, scores, new_hidden
-
+"""
 
 class Ranker(object):
     def __init__(self, decoder, padding_idx=0, attn_type='none'):
