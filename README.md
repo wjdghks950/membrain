@@ -3,9 +3,13 @@
 ## Contributors: 
 
 Kyusik Jeong:
+
 Jeonghwan Kim: jeonghwankim123@gmail.com
+
 Dongmin An:
+
 Jaeyoung Oh:
+
 Gwanwoo Jang:
 
 

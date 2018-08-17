@@ -13,6 +13,8 @@ import torch.nn.functional as F
 from parlai.core.torch_agent import Beam
 from parlai.core.dict import DictionaryAgent
 from utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+from utils.Modules import BottleLinear as Linear
+from utils.Layers import EncoderLayer, DecoderLayer
 import os
 
 
@@ -279,6 +281,7 @@ class EncoderLayer(nn.Module):
         return enc_output, enc_slf_attn
 
 class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all you need""
+    """Encoder model with a self-attention mechanism"""
     def __init__(self, num_features, num_max_seq, padding_idx=0, rnn_class='lstm',
             emb_size=512, dim_model=512, hidden_size = 1024, num_layers=6, num_heads=8,
             d_k=64, d_v=64, dropout=0.1, bidirectional=False,
@@ -294,10 +297,30 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
         self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
         self.src_word_emb = nn.Embedding(num_features, emb_size, padding_idx=Constants.PAD)
         self.layer_stack = nn.ModuleList([
-            EncoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout) 
+            EncoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
             for _ in range(n_layers)])
 
     def forward(self, src_seq, src_pos, return_attns=False): #TODO: Implement forward
+        # Word embeding look up
+        enc_input = self.src_word_emb(src_seq)
+
+        # Position Encoding attention
+        enc_input += self.position_enc(src_pos)
+        if return_attns:
+            enc_slf_attns = []
+
+        enc_output = enc_input
+        enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq)
+        for enc_layer in self.layer_stack:
+            enc_output, enc_slf_attn = enc_layer(enc_output,
+                    slf_attn_mask=enc_slf_attn_mask)
+            if return_attns:
+                enc_slf_attns += [enc_slf_attn]
+
+        if return_attns:
+            return enc_output, enc_slf_attns
+        else:
+            return enc_output,
 
 """
 class Encoder(nn.Module):
@@ -376,6 +399,9 @@ class DecoderLayer(nn.Module):
 
 
 class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all you need""
+    """Decoder with a self-attention mechanism"""
+    def __init__(self, num_features, num_max_seq, padding_idx=0, rnn_cl,
+            emb_size=512, dim_model=512, hidden_size=1024, num_layers=6, num_heads=8, d_k=64, d_v=64, dropout=0.1):
 """
 class Decoder(nn.Module):
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
