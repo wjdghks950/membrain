@@ -402,6 +402,7 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
     """Decoder with a self-attention mechanism"""
     def __init__(self, num_features, num_max_seq, padding_idx=0, rnn_cl,
             emb_size=512, dim_model=512, hidden_size=1024, num_layers=6, num_heads=8, d_k=64, d_v=64, dropout=0.1):
+
 """
 class Decoder(nn.Module):
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
