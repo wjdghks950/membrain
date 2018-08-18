@@ -15,6 +15,7 @@ from parlai.core.dict import DictionaryAgent
 from utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from utils.Modules import BottleLinear as Linear
 from utils.Layers import EncoderLayer, DecoderLayer
+from utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask
 import os
 
 
@@ -282,10 +283,10 @@ class EncoderLayer(nn.Module):
 
 class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all you need""
     """Encoder model with a self-attention mechanism"""
-    def __init__(self, num_features, num_max_seq, padding_idx=0, rnn_class='lstm',
-            emb_size=512, dim_model=512, hidden_size = 1024, num_layers=6, num_heads=8,
-            d_k=64, d_v=64, dropout=0.1, bidirectional=False,
-            shared_lt=None, shared_rnn=None, sparse=False):
+    def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
+                 emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
+                 bidirectional=False, shared_lt=None, shared_rnn=None,
+                 sparse=False, num_max_seq, num_heads=8, d_k=64, d_v=64):
 
         super(Encoder, self).__init__()
 
@@ -400,8 +401,62 @@ class DecoderLayer(nn.Module):
 
 class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all you need""
     """Decoder with a self-attention mechanism"""
-    def __init__(self, num_features, num_max_seq, padding_idx=0, rnn_cl,
-            emb_size=512, dim_model=512, hidden_size=1024, num_layers=6, num_heads=8, d_k=64, d_v=64, dropout=0.1):
+    def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
+                 emb_size=512, hidden_size=1024, num_layers=2, dropout=0.1,
+                 bidir_input=False, share_output=True,
+                 attn_type='none', attn_length=-1, attn_time='pre',
+                 sparse=False, numsoftmax=1, softmax_layer_bias=False, num_max_seq,
+                 num_layers=6, num_heads=8, d_k=64, d_v=64, d_model=512):
+
+        super(Decoder, self).__init__()
+        n_position = num_max_seq + 1
+        self.num_max_seq = num_max_seq
+        self.d_model = d_model
+
+        self.position_enc = nn.Embedding(
+                n_position, emb_size, padding_idx=Constants.PAD)
+        self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
+
+        self.tgt_word_emb = nn.Embedding(
+                num_features, emb_size, padding_idx=Constants.PAD)
+        self.dropout = nn.Dropout(dropout)
+
+        self.layer_stack = nn.ModuleList([
+            DecoderLayer(d_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
+            for _ in range(num_layers)]) #TODO: Shouldn't this be copy.deepcopy?
+
+    def forward(self, tgt_seq, tgt_pos, src_seq, enc_output, return_attns=False):
+        # Look up word embedding
+        dec_input = self.tgt_word_emb(tgt_seq)
+
+        # Adding positional encoding to the word vector
+        dec_input += self.position_enc(tgt_pos)
+
+        # Decode
+        self_attn_padmask = get_attn_padding_mask(tgt_seq, tgt_seq)
+        self_attn_submask = get_attn_subsequent_mask(tgt_seq)
+        self_attnmask = torch.gt(self_attn_padmask + self_attn_submask, 0)
+
+        dec_enc_attn_padmask = get_attn_padding_mask(tgt_seq, src_seq)
+
+        if return_attns:
+            dec_slf_attns, dec_enc_attns = [], []
+
+        dec_output = dec_input
+        for dec_layer in self.layer_stack:
+            dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
+                    dec_output, enc_output,
+                    slf_attn_mask=self_attnmask
+                    dec_enc_attn_mask=dec_enc_attn_padmask)
+
+            if return_attns:
+                dec_slf_attns += [dec_slf_attn]
+                dec_enc_attns += [dec_enc_attn]
+
+        if return_attns:
+            return dec_output, dec_slf_attns, dec_enc_attns
+        else:
+            return dec_output,
 
 """
 class Decoder(nn.Module):
