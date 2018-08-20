@@ -10,7 +10,7 @@ Dongmin An:
 
 Jaeyoung Oh:
 
-Gwanwoo Jang:
+Gwanwoo Jang: 21500615@handong.edu
 
 
 
