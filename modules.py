@@ -291,8 +291,7 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
                  emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
                  bidirectional=False, shared_lt=None, shared_rnn=None,
-                 sparse=False, num_max_seq, num_heads=8, d_k=64, d_v=64):
-
+                 sparse=False, num_max_seq, num_heads=8, d_k=64, d_v=64, dim_model=512):
         super(Encoder, self).__init__()
 
         n_position = num_max_seq + 1
@@ -306,7 +305,7 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
             EncoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
             for _ in range(n_layers)])
 
-    def forward(self, src_seq, src_pos, return_attns=False): #TODO: Implement forward
+    def forward(self, src_seq, src_pos, return_attns=False):
         # Word embeding look up
         enc_input = self.src_word_emb(src_seq)
 
@@ -411,12 +410,12 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
                  bidir_input=False, share_output=True,
                  attn_type='none', attn_length=-1, attn_time='pre',
                  sparse=False, numsoftmax=1, softmax_layer_bias=False, num_max_seq,
-                 num_layers=6, num_heads=8, d_k=64, d_v=64, d_model=512):
+                 num_layers=6, num_heads=8, d_k=64, d_v=64, dim_model=512):
 
         super(Decoder, self).__init__()
         n_position = num_max_seq + 1
         self.num_max_seq = num_max_seq
-        self.d_model = d_model
+        self.dim_model = dim_model
 
         self.position_enc = nn.Embedding(
                 n_position, emb_size, padding_idx=Constants.PAD)
@@ -427,8 +426,16 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
         self.dropout = nn.Dropout(dropout)
 
         self.layer_stack = nn.ModuleList([
-            DecoderLayer(d_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
+            DecoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
             for _ in range(num_layers)]) #TODO: Shouldn't this be copy.deepcopy?
+
+        # MoS - Mixture of Softmaxes
+        self.numsoftmax = numsoftmax
+        if numsoftmax > 1:
+            self.softmax = nn.Softmax(dim=1)
+            self.prior = nn.Linear(hidden_size, numsoftmax, bias=False)
+            self.latent = nn.Linear(hidden_size, numsoftmax * emb_size)
+            self.activation = nn.Tanh()
 
     def forward(self, tgt_seq, tgt_pos, src_seq, enc_output, return_attns=False):
         # Look up word embedding
@@ -458,6 +465,13 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
                 dec_slf_attns += [dec_slf_attn]
                 dec_enc_attns += [dec_enc_attn]
 
+        #TODO: Implement MoS(Mixture of Softmaxes) here
+        """
+        if self.numsoftmax > 1:
+        """
+
+        #TODO: Select top scoring index, excluding the padding symbol (at idx zero)
+        # we can do topk sampling from renormalized softmax here, default topk=1 is greedy
         if return_attns:
             return dec_output, dec_slf_attns, dec_enc_attns
         else:
