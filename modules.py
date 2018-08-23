@@ -60,7 +60,7 @@ class Membrain(nn.Module):
             attn_time=opt.get('attention_time'),
             bidir_input=opt['bidirectional'],
             numsoftmax=opt.get('numsoftmax', 1),
-            softmax_layer_bias=opt.get('softmax_layer_bias', False))
+            softmax_layer_bias=opt.get('softmax_layer_bias', False), num_max_seq, num_layers=6, num_heads=8, d_k=64, d_v=64, dim_model=512)
 
         shared_lt = (self.decoder.lt
                      if opt['lookuptable'] in ['enc_dec', 'all'] else None)
