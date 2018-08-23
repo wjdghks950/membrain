@@ -54,13 +54,13 @@ class Membrain(nn.Module):
         self.decoder = Decoder(
             num_features, padding_idx=self.NULL_IDX, rnn_class=rnn_class,
             emb_size=opt['embeddingsize'], hidden_size=opt['hiddensize'],
-            num_layers=opt['numlayers'], dropout=opt['dropout'],
+            num_max_seq, num_layers=opt['numlayers'], dropout=opt['dropout'],
             share_output=opt['lookuptable'] in ['dec_out', 'all'],
             attn_type=opt['attention'], attn_length=opt['attention_length'],
             attn_time=opt.get('attention_time'),
             bidir_input=opt['bidirectional'],
             numsoftmax=opt.get('numsoftmax', 1),
-            softmax_layer_bias=opt.get('softmax_layer_bias', False), num_max_seq, num_layers=6, num_heads=8, d_k=64, d_v=64, dim_model=512)
+            softmax_layer_bias=opt.get('softmax_layer_bias', False), num_heads=8, d_k=64, d_v=64, dim_model=512)
 
         shared_lt = (self.decoder.lt
                      if opt['lookuptable'] in ['enc_dec', 'all'] else None)
@@ -71,7 +71,7 @@ class Membrain(nn.Module):
             num_layers=opt['numlayers'], dropout=opt['dropout'],
             bidirectional=opt['bidirectional'],
             shared_lt=shared_lt, shared_rnn=shared_rnn, sparse=False,
-            num_max_seq=opt['max_seq_len'])
+            num_max_seq=opt['max_seq_len'], num_heads=8, d_k=64, k_v=64, dim_model=512)
 
         if self.rank:
             self.ranker = Ranker(
