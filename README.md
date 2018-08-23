@@ -2,7 +2,7 @@
 
 ## Contributors: 
 
-Kyusik Jeong:
+Kyusik Jeong: 20900635@handong.edu
 
 Jeonghwan Kim: jeonghwankim123@gmail.com
 
