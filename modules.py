@@ -12,10 +12,11 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import torch.nn.functional as F
 from parlai.core.torch_agent import Beam
 from parlai.core.dict import DictionaryAgent
-from utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
-from utils.Modules import BottleLinear as Linear
-from utils.Layers import EncoderLayer, DecoderLayer
-from utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask
+from .utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+from .utils.Modules import BottleLinear as Linear
+from .utils.Layers import EncoderLayer, DecoderLayer
+from .utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask
+from .utils import Constants as Constants
 import os
 
 

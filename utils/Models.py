@@ -2,9 +2,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import transformer.Constants as Constants
-from transformer.Modules import BottleLinear as Linear
-from transformer.Layers import EncoderLayer, DecoderLayer
+from . import Constants as Constants
+from .Modules import BottleLinear as Linear
+from .Layers import EncoderLayer, DecoderLayer
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -194,3 +194,6 @@ class Transformer(nn.Module):
         seq_logit = self.tgt_word_proj(dec_output)
 
         return seq_logit.view(-1, seq_logit.size(2))
+
+if __name__ == '__main__':
+    print('Sucess')

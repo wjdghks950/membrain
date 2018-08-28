@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from transformer.Models import Transformer
-from transformer.Beam import Beam
+from .Models import Transformer
+from .Beam import Beam
 
 class Translator(object):
     ''' Load with trained model and handle the beam search '''

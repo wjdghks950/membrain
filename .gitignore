@@ -2,6 +2,8 @@
 ##ignore:
 
 a.out
+*.pyc
 *~
 test*
 *swp
+__pycache__
