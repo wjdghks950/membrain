@@ -34,10 +34,7 @@ class Membrain(nn.Module):
     RNN_OPTS = {'rnn': nn.RNN, 'gru': nn.GRU, 'lstm': nn.LSTM}
 
     def __init__(self, opt, num_features,
-                 padding_idx=0, start_idx=1, end_idx=2, longest_label=1
-                 num_max_seq, num_layers=6, num_heads=8,
-                 d_model=512, d_k=64, d_v=64,
-                 proj_share_weight=True, embs_share_weight=True):
+                 padding_idx=0, start_idx=1, end_idx=2, longest_label=1):
 
         super().__init__()
         self.opt = opt
@@ -60,7 +57,8 @@ class Membrain(nn.Module):
             attn_time=opt.get('attention_time'),
             bidir_input=opt['bidirectional'],
             numsoftmax=opt.get('numsoftmax', 1),
-            softmax_layer_bias=opt.get('softmax_layer_bias', False))
+            softmax_layer_bias=opt.get('softmax_layer_bias', False),
+            num_max_seq=opt['max_seq_len'])
 
         shared_lt = (self.decoder.lt
                      if opt['lookuptable'] in ['enc_dec', 'all'] else None)
@@ -458,7 +456,7 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
         for dec_layer in self.layer_stack:
             dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
                     dec_output, enc_output,
-                    slf_attn_mask=self_attnmask
+                    slf_attn_mask=self_attnmask,
                     dec_enc_attn_mask=dec_enc_attn_padmask)
 
             if return_attns:
