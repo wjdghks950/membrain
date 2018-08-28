@@ -3,10 +3,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-from transformer.Modules import BottleLinear as Linear
-from transformer.Modules import ScaledDotProductAttention
-#from transformer.Modules import BottleLayerNormalization as LayerNormalization
-from transformer.Modules import LayerNormalization
+from Modules import BottleLinear as Linear
+from Modules import ScaledDotProductAttention
+#from utils.Modules import BottleLayerNormalization as LayerNormalization
+from Modules import LayerNormalization
 
 __author__ = "Yu-Hsiang Huang"
 

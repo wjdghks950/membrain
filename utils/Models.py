@@ -2,9 +2,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import transformer.Constants as Constants
-from transformer.Modules import BottleLinear as Linear
-from transformer.Layers import EncoderLayer, DecoderLayer
+import Constants as Constants
+from Modules import BottleLinear as Linear
+from Layers import EncoderLayer, DecoderLayer
 
 __author__ = "Yu-Hsiang Huang"
 
