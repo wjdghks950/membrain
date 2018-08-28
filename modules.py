@@ -34,14 +34,7 @@ class Membrain(nn.Module):
     RNN_OPTS = {'rnn': nn.RNN, 'gru': nn.GRU, 'lstm': nn.LSTM}
 
     def __init__(self, opt, num_features,
-<<<<<<< HEAD
                  padding_idx=0, start_idx=1, end_idx=2, longest_label=1):
-=======
-                 padding_idx=0, start_idx=1, end_idx=2, longest_label=1,
-                 num_max_seq, num_layers=6, num_heads=8,
-                 dim_model=512, d_k=64, d_v=64,
-                 proj_share_weight=True, embs_share_weight=True):
->>>>>>> 0493723d5d9df9ea0bcf6ea9f1f26f5cd5fdae28
 
         super().__init__()
         self.opt = opt
@@ -58,18 +51,13 @@ class Membrain(nn.Module):
         self.decoder = Decoder(
             num_features, padding_idx=self.NULL_IDX, rnn_class=rnn_class,
             emb_size=opt['embeddingsize'], hidden_size=opt['hiddensize'],
-            num_max_seq, num_layers=opt['numlayers'], dropout=opt['dropout'],
+            dropout=opt['dropout'], bidir_input=opt['bidirectional'],
             share_output=opt['lookuptable'] in ['dec_out', 'all'],
             attn_type=opt['attention'], attn_length=opt['attention_length'],
-            attn_time=opt.get('attention_time'),
-            bidir_input=opt['bidirectional'],
+            attn_time=opt.get('attention_time'), sparse=False,
             numsoftmax=opt.get('numsoftmax', 1),
-<<<<<<< HEAD
             softmax_layer_bias=opt.get('softmax_layer_bias', False),
             num_max_seq=opt['max_seq_len'])
-=======
-            softmax_layer_bias=opt.get('softmax_layer_bias', False), num_heads=8, d_k=64, d_v=64, dim_model=512)
->>>>>>> 0493723d5d9df9ea0bcf6ea9f1f26f5cd5fdae28
 
         shared_lt = (self.decoder.lt
                      if opt['lookuptable'] in ['enc_dec', 'all'] else None)
@@ -80,7 +68,7 @@ class Membrain(nn.Module):
             num_layers=opt['numlayers'], dropout=opt['dropout'],
             bidirectional=opt['bidirectional'],
             shared_lt=shared_lt, shared_rnn=shared_rnn, sparse=False,
-            num_max_seq=opt['max_seq_len'], num_heads=8, d_k=64, k_v=64, dim_model=512)
+            num_max_seq=opt['max_seq_len'], num_heads=opt['num_heads'], d_k=opt['d_k'], d_v=opt['d_v'], dim_model=opt['d_model'])
 
         if self.rank:
             self.ranker = Ranker(
@@ -301,16 +289,12 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
                  emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
                  bidirectional=False, shared_lt=None, shared_rnn=None,
                  sparse=False, num_max_seq, num_heads=8, d_k=64, d_v=64, dim_model=512):
-<<<<<<< HEAD
-=======
-
->>>>>>> 0493723d5d9df9ea0bcf6ea9f1f26f5cd5fdae28
         super(Encoder, self).__init__()
 
         n_position = num_max_seq + 1
         self.num_max_seq = num_max_seq
         self.dim_model = dim_model
-        
+
         self.position_enc = nn.Embedding(n_position, emb_size, padding_idx=Constants.PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
         self.src_word_emb = nn.Embedding(num_features, emb_size, padding_idx=Constants.PAD)
