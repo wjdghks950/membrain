@@ -60,15 +60,13 @@ class Membrain(nn.Module):
             softmax_layer_bias=opt.get('softmax_layer_bias', False),
             num_max_seq=opt['max_seq_len'])
 
-        shared_lt = (self.decoder.lt
-                     if opt['lookuptable'] in ['enc_dec', 'all'] else None)
         shared_rnn = self.decoder.rnn if opt['decoder'] == 'shared' else None
         self.encoder = Encoder(
             num_features, padding_idx=self.NULL_IDX, rnn_class=rnn_class,
             emb_size=opt['embeddingsize'], hidden_size=opt['hiddensize'],
             num_layers=opt['numlayers'], dropout=opt['dropout'],
             bidirectional=opt['bidirectional'],
-            shared_lt=shared_lt, shared_rnn=shared_rnn, sparse=False,
+            shared_rnn=shared_rnn, sparse=False,
             num_max_seq=opt['max_seq_len'], num_heads=opt['num_heads'], d_k=opt['d_k'], d_v=opt['d_v'], dim_model=opt['d_model'])
 
         if self.rank:
@@ -288,7 +286,7 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
     """Encoder model with a self-attention mechanism"""
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
                  emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
-                 bidirectional=False, shared_lt=None, shared_rnn=None,
+                 bidirectional=False, shared_rnn=None,
                  sparse=False, num_max_seq=128, num_heads=8, d_k=64, d_v=64, dim_model=512):
         super(Encoder, self).__init__()
 
