@@ -288,7 +288,7 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
                  emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
                  bidirectional=False, shared_lt=None, shared_rnn=None,
-                 sparse=False, num_max_seq, num_heads=8, d_k=64, d_v=64, dim_model=512):
+                 sparse=False, num_max_seq=128, num_heads=8, d_k=64, d_v=64, dim_model=512):
         super(Encoder, self).__init__()
 
         n_position = num_max_seq + 1
@@ -406,7 +406,7 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
                  emb_size=512, hidden_size=1024, dropout=0.1,
                  bidir_input=False, share_output=True,
                  attn_type='none', attn_length=-1, attn_time='pre',
-                 sparse=False, numsoftmax=1, softmax_layer_bias=False, num_max_seq,
+                 sparse=False, numsoftmax=1, softmax_layer_bias=False, num_max_seq=128,
                  num_layers=6, num_heads=8, d_k=64, d_v=64, dim_model=512):
 
         super(Decoder, self).__init__()
