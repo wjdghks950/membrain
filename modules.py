@@ -16,7 +16,10 @@ from .utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from .utils.Modules import BottleLinear as Linear
 from .utils.Layers import EncoderLayer, DecoderLayer
 from .utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask
+<<<<<<< HEAD
 from .utils import Constants as Constants
+=======
+>>>>>>> b815d0f85199a4da0d33802593c9b99b002d87d2
 import os
 
 

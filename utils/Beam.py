@@ -7,7 +7,11 @@
 
 import torch
 import numpy as np
+<<<<<<< HEAD
 from . import Constants as Constants
+=======
+import Constants as Constants
+>>>>>>> b815d0f85199a4da0d33802593c9b99b002d87d2
 
 class Beam(object):
     ''' Store the neccesary info for beam search. '''
