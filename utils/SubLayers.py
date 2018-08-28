@@ -30,9 +30,9 @@ class MultiHeadAttention(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        init.xavier_normal(self.w_qs)
-        init.xavier_normal(self.w_ks)
-        init.xavier_normal(self.w_vs)
+        nn.init.xavier_normal_(self.w_qs)
+        nn.init.xavier_normal_(self.w_ks)
+        nn.init.xavier_normal_(self.w_vs)
 
     def forward(self, q, k, v, attn_mask=None):
 

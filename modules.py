@@ -299,7 +299,7 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
         self.src_word_emb = nn.Embedding(num_features, emb_size, padding_idx=Constants.PAD)
         self.layer_stack = nn.ModuleList([
             EncoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
-            for _ in range(n_layers)])
+            for _ in range(num_layers)])
 
     def forward(self, src_seq, src_pos, return_attns=False):
         # Word embeding look up
