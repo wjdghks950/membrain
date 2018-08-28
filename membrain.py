@@ -281,6 +281,8 @@ class MembrainAgent(Agent):
                 else:
                     t = lambda x: x
                 cnt = 0
+                '''
+                # Note lt is not used for Transformer
                 for w, i in self.dict.tok2ind.items():
                     if w in embs.stoi:
                         vec = t(embs.vectors[embs.stoi[w]])
@@ -289,6 +291,7 @@ class MembrainAgent(Agent):
                         if opt['lookuptable'] in ['unique', 'dec_out']:
                             # also set encoder lt, since it's not shared
                             self.model.encoder.lt.weight.data[i] = vec
+                '''
                 print('Membrain: initialized embeddings for {} tokens from {}.'
                       ''.format(cnt, init))
 
