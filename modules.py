@@ -34,7 +34,14 @@ class Membrain(nn.Module):
     RNN_OPTS = {'rnn': nn.RNN, 'gru': nn.GRU, 'lstm': nn.LSTM}
 
     def __init__(self, opt, num_features,
+<<<<<<< HEAD
                  padding_idx=0, start_idx=1, end_idx=2, longest_label=1):
+=======
+                 padding_idx=0, start_idx=1, end_idx=2, longest_label=1,
+                 num_max_seq, num_layers=6, num_heads=8,
+                 dim_model=512, d_k=64, d_v=64,
+                 proj_share_weight=True, embs_share_weight=True):
+>>>>>>> 0493723d5d9df9ea0bcf6ea9f1f26f5cd5fdae28
 
         super().__init__()
         self.opt = opt
@@ -51,14 +58,18 @@ class Membrain(nn.Module):
         self.decoder = Decoder(
             num_features, padding_idx=self.NULL_IDX, rnn_class=rnn_class,
             emb_size=opt['embeddingsize'], hidden_size=opt['hiddensize'],
-            num_layers=opt['numlayers'], dropout=opt['dropout'],
+            num_max_seq, num_layers=opt['numlayers'], dropout=opt['dropout'],
             share_output=opt['lookuptable'] in ['dec_out', 'all'],
             attn_type=opt['attention'], attn_length=opt['attention_length'],
             attn_time=opt.get('attention_time'),
             bidir_input=opt['bidirectional'],
             numsoftmax=opt.get('numsoftmax', 1),
+<<<<<<< HEAD
             softmax_layer_bias=opt.get('softmax_layer_bias', False),
             num_max_seq=opt['max_seq_len'])
+=======
+            softmax_layer_bias=opt.get('softmax_layer_bias', False), num_heads=8, d_k=64, d_v=64, dim_model=512)
+>>>>>>> 0493723d5d9df9ea0bcf6ea9f1f26f5cd5fdae28
 
         shared_lt = (self.decoder.lt
                      if opt['lookuptable'] in ['enc_dec', 'all'] else None)
@@ -69,7 +80,7 @@ class Membrain(nn.Module):
             num_layers=opt['numlayers'], dropout=opt['dropout'],
             bidirectional=opt['bidirectional'],
             shared_lt=shared_lt, shared_rnn=shared_rnn, sparse=False,
-            num_max_seq=opt['max_seq_len'])
+            num_max_seq=opt['max_seq_len'], num_heads=8, d_k=64, k_v=64, dim_model=512)
 
         if self.rank:
             self.ranker = Ranker(
@@ -271,11 +282,11 @@ class Membrain(nn.Module):
 
 class EncoderLayer(nn.Module):
 
-    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
+    def __init__(self, dim_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
         super(EncoderLayer, self).__init__()
         self.slf_attn = MultiHeadAttention(
-                n_head, d_model, d_k, d_v, dropout=dropout)
-        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
+                n_head, dim_model, d_k, d_v, dropout=dropout)
+        self.pos_ffn = PositionwiseFeedForward(dim_model, d_inner_hid, dropout=dropout)
 
     def forward(self, enc_input, slf_attn_mask=None):
         enc_output, enc_slf_attn = self.slf_attn(
@@ -290,12 +301,16 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
                  emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
                  bidirectional=False, shared_lt=None, shared_rnn=None,
                  sparse=False, num_max_seq, num_heads=8, d_k=64, d_v=64, dim_model=512):
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0493723d5d9df9ea0bcf6ea9f1f26f5cd5fdae28
         super(Encoder, self).__init__()
 
         n_position = num_max_seq + 1
         self.num_max_seq = num_max_seq
         self.dim_model = dim_model
-
+        
         self.position_enc = nn.Embedding(n_position, emb_size, padding_idx=Constants.PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
         self.src_word_emb = nn.Embedding(num_features, emb_size, padding_idx=Constants.PAD)
@@ -385,11 +400,11 @@ class Encoder(nn.Module):
 
 class DecoderLayer(nn.Module):
 
-    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
+    def __init__(self, dim_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
         super(DecoderLayer, self).__init__()
-        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
-        self.enc_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
-        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
+        self.slf_attn = MultiHeadAttention(n_head, dim_model, d_k, d_v, dropout=dropout)
+        self.enc_attn = MultiHeadAttention(n_head, dim_model, d_k, d_v, dropout=dropout)
+        self.pos_ffn = PositionwiseFeedForward(dim_model, d_inner_hid, dropout=dropout)
 
     def forward(self, dec_input, enc_output, slf_attn_mask=None, dec_enc_attn_mask=None):
         dec_output, dec_slf_attn = self.slf_attn(
@@ -404,7 +419,7 @@ class DecoderLayer(nn.Module):
 class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all you need""
     """Decoder with a self-attention mechanism"""
     def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
-                 emb_size=512, hidden_size=1024, num_layers=2, dropout=0.1,
+                 emb_size=512, hidden_size=1024, dropout=0.1,
                  bidir_input=False, share_output=True,
                  attn_type='none', attn_length=-1, attn_time='pre',
                  sparse=False, numsoftmax=1, softmax_layer_bias=False, num_max_seq,
