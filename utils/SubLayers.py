@@ -3,17 +3,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-<<<<<<< HEAD
 from .Modules import BottleLinear as Linear
 from .Modules import ScaledDotProductAttention
 #from utils.Modules import BottleLayerNormalization as LayerNormalization
 from .Modules import LayerNormalization
-=======
-from Modules import BottleLinear as Linear
-from Modules import ScaledDotProductAttention
-#from utils.Modules import BottleLayerNormalization as LayerNormalization
-from Modules import LayerNormalization
->>>>>>> b815d0f85199a4da0d33802593c9b99b002d87d2
 
 __author__ = "Yu-Hsiang Huang"
 
