@@ -18,6 +18,7 @@ from .utils.Layers import EncoderLayer, DecoderLayer
 from .utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask
 from .utils import Constants as Constants
 import os
+import numpy as np
 
 
 def pad(tensor, length, dim=0):
@@ -122,6 +123,13 @@ class Membrain(nn.Module):
             cands during training as well
         """
         input_xs = xs
+
+        xs_pos = torch.LongTensor([
+        [pos_i+1 if w_i != Constants.PAD else 0
+         for pos_i, w_i in enumerate(inst)] for inst in xs])
+
+        xs_pos = xs_pos.cuda()
+
         nbest_beam_preds, nbest_beam_scores = None, None
         bsz = len(xs)
         if ys is not None:
@@ -132,7 +140,9 @@ class Membrain(nn.Module):
         if prev_enc is not None:
             enc_out, hidden, attn_mask = prev_enc
         else:
-            enc_out, hidden = self.encoder(xs)
+            enc_out, = self.encoder(xs, xs_pos)
+            ###SC
+            print('Encoder Finish')
             attn_mask = xs.ne(0).float() if self.attn_type != 'none' else None
         encoder_states = (enc_out, hidden, attn_mask)
         start = self.START.detach()
@@ -302,16 +312,23 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
             for _ in range(num_layers)])
 
     def forward(self, src_seq, src_pos, return_attns=False):
+
         # Word embeding look up
         enc_input = self.src_word_emb(src_seq)
 
+
+
         # Position Encoding attention
         enc_input += self.position_enc(src_pos)
+
+
         if return_attns:
             enc_slf_attns = []
 
         enc_output = enc_input
         enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq)
+
+
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(enc_output,
                     slf_attn_mask=enc_slf_attn_mask)

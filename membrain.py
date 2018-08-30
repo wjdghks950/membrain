@@ -281,19 +281,19 @@ class MembrainAgent(Agent):
                 else:
                     t = lambda x: x
                 cnt = 0
-                '''
+                
                 # Note lt is not used for Transformer
-                for w, i in self.dict.tok2ind.items():
-                    if w in embs.stoi:
-                        vec = t(embs.vectors[embs.stoi[w]])
-                        self.model.decoder.lt.weight.data[i] = vec
-                        cnt += 1
-                        if opt['lookuptable'] in ['unique', 'dec_out']:
-                            # also set encoder lt, since it's not shared
-                            self.model.encoder.lt.weight.data[i] = vec
-                '''
-                print('Membrain: initialized embeddings for {} tokens from {}.'
-                      ''.format(cnt, init))
+                # for w, i in self.dict.tok2ind.items():
+                #     if w in embs.stoi:
+                #         vec = t(embs.vectors[embs.stoi[w]])
+                #         self.model.decoder.lt.weight.data[i] = vec
+                #         cnt += 1
+                #         if opt['lookuptable'] in ['unique', 'dec_out']:
+                #             # also set encoder lt, since it's not shared
+                #             self.model.encoder.lt.weight.data[i] = vec
+                
+                # print('Membrain: initialized embeddings for {} tokens from {}.'
+                #       ''.format(cnt, init))
 
             if states:
                 # set loaded states if applicable
@@ -494,6 +494,8 @@ class MembrainAgent(Agent):
         Update the model using the targets if available, otherwise rank
         candidates as well if they are available and param is set.
         """
+        ###SC
+        print('Agent.predict()!!!')
         predictions, cand_preds = None, None
         if is_training:
             self.model.train()
@@ -602,8 +604,10 @@ class MembrainAgent(Agent):
                     raise e
 
     def batch_act(self, observations):
+
         batchsize = len(observations)
         self.init_cuda_buffer(batchsize)
+
         # initialize a table of replies with this agent's id
         batch_reply = [{'id': self.getID()} for _ in range(batchsize)]
 
@@ -611,7 +615,9 @@ class MembrainAgent(Agent):
         # valid_inds tells us the indices of all valid examples
         # e.g. for input [{}, {'text': 'hello'}, {}, {}], valid_inds is [1]
         # since the other three elements had no 'text' field
+        print(observations)
         xs, ys, labels, valid_inds, cands, valid_cands, is_training = self.vectorize(observations)
+        print(xs)
 
         if xs is None:
             # no valid examples, just return empty responses
