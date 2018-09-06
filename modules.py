@@ -33,8 +33,6 @@ def pad(tensor, length, dim=0):
 
 
 class Membrain(nn.Module):
-    RNN_OPTS = {'rnn': nn.RNN, 'gru': nn.GRU, 'lstm': nn.LSTM}
-
     def __init__(self, opt, num_features,
                  padding_idx=0, start_idx=1, end_idx=2, longest_label=1):
 
@@ -49,25 +47,20 @@ class Membrain(nn.Module):
         self.register_buffer('START', torch.LongTensor([start_idx]))
         self.longest_label = longest_label
 
-        rnn_class = Membrain.RNN_OPTS[opt['rnn_class']]
         self.decoder = Decoder(
-            num_features, padding_idx=self.NULL_IDX, rnn_class=rnn_class,
+            num_features, padding_idx=self.NULL_IDX, 
             emb_size=opt['embeddingsize'], hidden_size=opt['hiddensize'],
-            dropout=opt['dropout'], bidir_input=opt['bidirectional'],
-            share_output=opt['lookuptable'] in ['dec_out', 'all'],
+            dropout=opt['dropout'], 
             attn_type=opt['attention'], attn_length=opt['attention_length'],
             attn_time=opt.get('attention_time'), sparse=False,
             numsoftmax=opt.get('numsoftmax', 1),
             softmax_layer_bias=opt.get('softmax_layer_bias', False),
             num_max_seq=opt['max_seq_len'])
 
-        shared_rnn = self.decoder.rnn if opt['decoder'] == 'shared' else None
         self.encoder = Encoder(
-            num_features, padding_idx=self.NULL_IDX, rnn_class=rnn_class,
+            num_features, padding_idx=self.NULL_IDX, 
             emb_size=opt['embeddingsize'], hidden_size=opt['hiddensize'],
             num_layers=opt['numlayers'], dropout=opt['dropout'],
-            bidirectional=opt['bidirectional'],
-            shared_rnn=shared_rnn, sparse=False,
             num_max_seq=opt['max_seq_len'], num_heads=opt['num_heads'], d_k=opt['d_k'], d_v=opt['d_v'], dim_model=opt['d_model'])
 
         if self.rank:
@@ -84,6 +77,9 @@ class Membrain(nn.Module):
             if not os.path.exists(self.beam_dump_path):
                 os.makedirs(self.beam_dump_path)
 
+    '''
+    Commented out by DM.
+    We only need to consider the case when beam size is 1; this function becomes unreferenced.
     def unbeamize_hidden(self, hidden, beam_size, batch_size):
         """
         Creates a view of the hidden where batch axis is collapsed with beam axis,
@@ -102,7 +98,7 @@ class Membrain(nn.Module):
             num_layers = hidden.size(0)
             hidden_size = hidden.size(-1)
             return hidden.view(num_layers, batch_size * beam_size, hidden_size)
-
+    '''
     def unbeamize_enc_out(self, enc_out, beam_size, batch_size):
         hidden_size = enc_out.size(-1)
         return enc_out.view(batch_size * beam_size, -1, hidden_size)
@@ -140,7 +136,7 @@ class Membrain(nn.Module):
         if prev_enc is not None:
             enc_out, hidden, attn_mask = prev_enc
         else:
-            enc_out, = self.encoder(xs, xs_pos)
+            enc_out, hidden = self.encoder(xs, xs_pos)
             ###SC
             print('Encoder Finish')
             attn_mask = xs.ne(0).float() if self.attn_type != 'none' else None
@@ -197,7 +193,9 @@ class Membrain(nn.Module):
                     if total_done == bsz:
                         # no need to generate any more
                         break
-
+            '''
+            commented out by dm.
+            Default beam size is 1
             elif beam_size > 1:
                 enc_out, hidden = encoder_states[0], encoder_states[1]  # take it from encoder
                 enc_out = enc_out.unsqueeze(1).repeat(1, beam_size, 1, 1)
@@ -270,12 +268,14 @@ class Membrain(nn.Module):
                 predictions = beam_pred
                 scores = beam_scores
 
+        '''
         if isinstance(predictions, list):
             predictions = torch.cat(predictions, 1)
         if isinstance(scores, list):
             scores = torch.cat(scores, 1)
 
         return predictions, scores, cand_preds, cand_scores, encoder_states, nbest_beam_preds, nbest_beam_scores
+
 
 class EncoderLayer(nn.Module):
 
@@ -294,9 +294,8 @@ class EncoderLayer(nn.Module):
 
 class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all you need""
     """Encoder model with a self-attention mechanism"""
-    def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
+    def __init__(self, num_features, padding_idx=0, 
                  emb_size=512, hidden_size=1024, num_layers=6, dropout=0.1,
-                 bidirectional=False, shared_rnn=None,
                  sparse=False, num_max_seq=128, num_heads=8, d_k=64, d_v=64, dim_model=512):
         super(Encoder, self).__init__()
 
@@ -338,7 +337,7 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
         if return_attns:
             return enc_output, enc_slf_attns
         else:
-            return enc_output,
+            return enc_output
 
 
 class DecoderLayer(nn.Module):
@@ -361,9 +360,8 @@ class DecoderLayer(nn.Module):
 
 class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all you need""
     """Decoder with a self-attention mechanism"""
-    def __init__(self, num_features, padding_idx=0, rnn_class='lstm',
+    def __init__(self, num_features, padding_idx=0, 
                  emb_size=512, hidden_size=1024, dropout=0.1,
-                 bidir_input=False, share_output=True,
                  attn_type='none', attn_length=-1, attn_time='pre',
                  sparse=False, numsoftmax=1, softmax_layer_bias=False, num_max_seq=128,
                  num_layers=6, num_heads=8, d_k=64, d_v=64, dim_model=512):

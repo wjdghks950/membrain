@@ -76,10 +76,6 @@ class MembrainAgent(Agent):
                            help='dropout rate')
         agent.add_argument('-clip', '--gradient-clip', type=float, default=0.1,
                            help='gradient clipping using l2 norm')
-        agent.add_argument('-bi', '--bidirectional', type='bool',
-                           default=False,
-                           help='whether to encode the context with a '
-                                'bidirectional rnn')
         agent.add_argument('-att', '--attention', default='none',
                            choices=['none', 'concat', 'general', 'dot', 'local'],
                            help='Choices: none, concat, general, local. '
@@ -107,9 +103,6 @@ class MembrainAgent(Agent):
                            'input and output to have a maximum length. This '
                            'reduces the total amount '
                            'of padding in the batches.')
-        agent.add_argument('-rnn', '--rnn-class', default='lstm',
-                           choices=Membrain.RNN_OPTS.keys(),
-                           help='Choose between different types of RNNs.')
         agent.add_argument('-dec', '--decoder', default='same',
                            choices=['same', 'shared'],
                            help='Choose between different decoder modules. '
