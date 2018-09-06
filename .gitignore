@@ -4,6 +4,7 @@
 a.out
 *.pyc
 *~
+*.swo
 test*
 *swp
 __pycache__
