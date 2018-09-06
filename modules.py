@@ -15,7 +15,7 @@ from parlai.core.dict import DictionaryAgent
 from .utils.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from .utils.Modules import BottleLinear as Linear
 from .utils.Layers import EncoderLayer, DecoderLayer
-from .utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask
+from .utils.Models import position_encoding_init, get_attn_padding_mask, get_attn_subsequent_mask,get_sinusoid_encoding_table
 from .utils import Constants as Constants
 import os
 import numpy as np
@@ -315,11 +315,8 @@ class Encoder(nn.Module): #TODO: Implement Encoder based on ""Attention is all y
         # Word embeding look up
         enc_input = self.src_word_emb(src_seq)
 
-
-
         # Position Encoding attention
         enc_input += self.position_enc(src_pos)
-
 
         if return_attns:
             enc_slf_attns = []
@@ -371,18 +368,19 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
         self.num_max_seq = num_max_seq
         self.dim_model = dim_model
 
-        self.position_enc = nn.Embedding(
-                n_position, emb_size, padding_idx=Constants.PAD)
-        self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
-
-        self.tgt_word_emb = nn.Embedding(
+        self.tgt_word_emb = nn.Embedding( #dm changed first arg n_position to num_features
                 num_features, emb_size, padding_idx=Constants.PAD)
-        self.dropout = nn.Dropout(dropout)
+
+        #self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
+        #use positional encoding with sinusoid enc table
+        self.position_enc = nn.Embedding.from_pretrained(get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0), freeze=True)
+
+        #self.dropout = nn.Dropout(dropout) DM, Dropout implicity defined inside DecoderLayer
 
         self.layer_stack = nn.ModuleList([
             DecoderLayer(dim_model, hidden_size, num_heads, d_k, d_v, dropout=dropout)
             for _ in range(num_layers)]) #TODO: Shouldn't this be copy.deepcopy?
-
+        '''
         # MoS - Mixture of Softmaxes
         self.numsoftmax = numsoftmax
         if numsoftmax > 1:
@@ -390,7 +388,7 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
             self.prior = nn.Linear(hidden_size, numsoftmax, bias=False)
             self.latent = nn.Linear(hidden_size, numsoftmax * emb_size)
             self.activation = nn.Tanh()
-
+        '''
     def forward(self, tgt_seq, tgt_pos, src_seq, enc_output, return_attns=False):
         # Look up word embedding
         dec_input = self.tgt_word_emb(tgt_seq)
