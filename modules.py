@@ -355,7 +355,7 @@ class DecoderLayer(nn.Module):
         return dec_output, dec_slf_attn, dec_enc_attn
 
 
-class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all you need""
+class Decoder(nn.Module): #TODO: dm Implement decoder output correctly 
     """Decoder with a self-attention mechanism"""
     def __init__(self, num_features, padding_idx=0, 
                  emb_size=512, hidden_size=1024, dropout=0.1,
@@ -368,12 +368,16 @@ class Decoder(nn.Module): #TODO: Implement Decoder based on ""Attention is all y
         self.num_max_seq = num_max_seq
         self.dim_model = dim_model
 
+        self.position_enc = nn.Embedding(n_position, emb_size, padding_idx=Constants.PAD)
+        self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
+
         self.tgt_word_emb = nn.Embedding( #dm changed first arg n_position to num_features
                 num_features, emb_size, padding_idx=Constants.PAD)
+        #is num_features really the same dim as n_tgt_vocab as from att?
 
         #self.position_enc.weight.data = position_encoding_init(n_position, emb_size)
         #use positional encoding with sinusoid enc table
-        self.position_enc = nn.Embedding.from_pretrained(get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0), freeze=True)
+        #self.position_enc = nn.Embedding.from_pretrained(get_sinusoid_encoding_table(n_position, emb_size, padding_idx=0), freeze=True)
 
         #self.dropout = nn.Dropout(dropout) DM, Dropout implicity defined inside DecoderLayer
 
