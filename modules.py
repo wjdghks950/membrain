@@ -107,7 +107,7 @@ class Membrain(nn.Module):
         hidden_size = enc_out.size(-1)
         return enc_out.view(batch_size * beam_size, -1, hidden_size)
 
-    def forward(self, xs, ys=None, cands=None, valid_cands=None, prev_enc=None,
+    #def forward(self, xs, ys=None, cands=None, valid_cands=None, prev_enc=None,
                 rank_during_training=False, beam_size=1, topk=1):
         """Get output predictions from the model.
 
@@ -122,160 +122,18 @@ class Membrain(nn.Module):
         rank_during_training -- (default False) if set, ranks any available
             cands during training as well
         """
-        input_xs = xs
+    def forward(self, xs, ys):
+        src_seq, src_pos = xs
+        tgt_seq, tgt_pos = ys
 
-        xs_pos = torch.LongTensor([
-        [pos_i+1 if w_i != Constants.PAD else 0
-         for pos_i, w_i in enumerate(inst)] for inst in xs])
+        tgt_seq = tgt_seq[:, :-1]
+        tgt_pos = tgt_pos[:, :-1]
 
-        xs_pos = xs_pos.cuda()
+        enc_output, *_ = self.encoder(src_seq, src_pos)
+        dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, enc_output)
+        seq_logit = self.tgt_word_proj(dec_output)
 
-        nbest_beam_preds, nbest_beam_scores = None, None
-        bsz = len(xs)
-        if ys is not None:
-            # keep track of longest label we've ever seen
-            # we'll never produce longer ones than that during prediction
-            self.longest_label = max(self.longest_label, ys.size(1))
-
-        if prev_enc is not None:
-            enc_out, hidden, attn_mask = prev_enc
-        else:
-            enc_out, = self.encoder(xs, xs_pos)
-            ###SC
-            print('Encoder Finish')
-            attn_mask = xs.ne(0).float() if self.attn_type != 'none' else None
-        encoder_states = (enc_out, hidden, attn_mask)
-        start = self.START.detach()
-        starts = start.expand(bsz, 1)
-
-        predictions = []
-        scores = []
-        cand_preds, cand_scores = None, None
-        if self.rank and cands is not None:
-            decode_params = (start, hidden, enc_out, attn_mask)
-            if self.training:
-                if rank_during_training:
-                    cand_preds, cand_scores = self.ranker.forward(cands, valid_cands, decode_params=decode_params)
-            else:
-                cand_preds, cand_scores = self.ranker.forward(cands, valid_cands, decode_params=decode_params)
-
-        if ys is not None:
-            y_in = ys.narrow(1, 0, ys.size(1) - 1)
-            xs = torch.cat([starts, y_in], 1)
-            if self.attn_type == 'none':
-                preds, score, hidden = self.decoder(xs, hidden, enc_out, attn_mask)
-                predictions.append(preds)
-                scores.append(score)
-            else:
-                for i in range(ys.size(1)):
-                    xi = xs.select(1, i)
-                    preds, score, hidden = self.decoder(xi, hidden, enc_out, attn_mask)
-                    predictions.append(preds)
-                    scores.append(score)
-        else:
-            # here we do search: supported search types: greedy, beam search
-            if beam_size == 1:
-                done = [False for _ in range(bsz)]
-                total_done = 0
-                xs = starts
-
-                for _ in range(self.longest_label):
-                    # generate at most longest_label tokens
-                    preds, score, hidden = self.decoder(xs, hidden, enc_out, attn_mask, topk)
-                    scores.append(score)
-                    xs = preds
-                    predictions.append(preds)
-
-                    # check if we've produced the end token
-                    for b in range(bsz):
-                        if not done[b]:
-                            # only add more tokens for examples that aren't done
-                            if preds.data[b][0] == self.END_IDX:
-                                # if we produced END, we're done
-                                done[b] = True
-                                total_done += 1
-                    if total_done == bsz:
-                        # no need to generate any more
-                        break
-
-            elif beam_size > 1:
-                enc_out, hidden = encoder_states[0], encoder_states[1]  # take it from encoder
-                enc_out = enc_out.unsqueeze(1).repeat(1, beam_size, 1, 1)
-                # create batch size num of beams
-                data_device = enc_out.device
-                beams = [Beam(beam_size, 3, 0, 1, 2, min_n_best=beam_size/2, cuda=data_device) for _ in range(bsz)]
-                # init the input with start token
-                xs = starts
-                # repeat tensors to support batched beam
-                xs = xs.repeat(1, beam_size)
-                attn_mask = input_xs.ne(0).float()
-                attn_mask = attn_mask.unsqueeze(1).repeat(1, beam_size, 1)
-                repeated_hidden = []
-
-                if isinstance(hidden, tuple):
-                    for i in range(hidden[0].size(0)):
-                        repeated_hidden.append(hidden[i].unsqueeze(2).repeat(1, 1, beam_size, 1))
-                    hidden = self.unbeamize_hidden(tuple(repeated_hidden), beam_size, bsz)
-                else:  # GRU
-                    repeated_hidden = hidden.unsqueeze(2).repeat(1, 1, beam_size, 1)
-                    hidden = self.unbeamize_hidden(repeated_hidden, beam_size, bsz)
-                enc_out = self.unbeamize_enc_out(enc_out, beam_size, bsz)
-                xs = xs.view(bsz * beam_size, -1)
-                for step in range(self.longest_label):
-                    if all((b.done() for b in beams)):
-                        break
-                    out = self.decoder(xs, hidden, enc_out)
-                    scores = out[1]
-                    scores = scores.view(bsz, beam_size, -1)  # -1 is a vocab size
-                    for i, b in enumerate(beams):
-                        b.advance(F.log_softmax(scores[i, :], dim=-1))
-                    xs = torch.cat([b.get_output_from_current_step() for b in beams]).unsqueeze(-1)
-                    permute_hidden_idx = torch.cat(
-                        [beam_size * i + b.get_backtrack_from_current_step() for i, b in enumerate(beams)])
-                    new_hidden = out[2]
-                    if isinstance(hidden, tuple):
-                        for i in range(len(hidden)):
-                            hidden[i].data.copy_(new_hidden[i].data.index_select(dim=1, index=permute_hidden_idx))
-                    else:  # GRU
-                        hidden.data.copy_(new_hidden.data.index_select(dim=1, index=permute_hidden_idx))
-
-                for b in beams:
-                    b.check_finished()
-                beam_pred = [ b.get_pretty_hypothesis(b.get_top_hyp()[0])[1:] for b in beams ]
-                # these beam scores are rescored with length penalty!
-                beam_scores = torch.stack([b.get_top_hyp()[1] for b in beams])
-                pad_length = max([t.size(0) for t in beam_pred])
-                beam_pred = torch.stack([pad(t, length=pad_length, dim=0) for t in beam_pred], dim=0)
-
-                #  prepare n best list for each beam
-                n_best_beam_tails = [ b.get_rescored_finished(n_best=len(b.finished)) for b in beams ]
-                nbest_beam_scores = []
-                nbest_beam_preds = []
-                for i, beamtails in enumerate(n_best_beam_tails):
-                    perbeam_preds = []
-                    perbeam_scores = []
-                    for tail in beamtails:
-                        perbeam_preds.append(beams[i].get_pretty_hypothesis(beams[i].get_hyp_from_finished(tail)))
-                        perbeam_scores.append(tail.score)
-                    nbest_beam_scores.append(perbeam_scores)
-                    nbest_beam_preds.append(perbeam_preds)
-
-                if self.beam_log_freq > 0.0:
-                    num_dump = round(bsz * self.beam_log_freq)
-                    for i in range(num_dump):
-                        dot_graph = beams[i].get_beam_dot(dictionary=self.dict)
-                        dot_graph.write_png(os.path.join(self.beam_dump_path, "{}.png".format(self.beam_dump_filecnt)))
-                        self.beam_dump_filecnt += 1
-
-                predictions = beam_pred
-                scores = beam_scores
-
-        if isinstance(predictions, list):
-            predictions = torch.cat(predictions, 1)
-        if isinstance(scores, list):
-            scores = torch.cat(scores, 1)
-
-        return predictions, scores, cand_preds, cand_scores, encoder_states, nbest_beam_preds, nbest_beam_scores
+        return seq_logit.view(-1, seq_logit.size(2))
 
 class EncoderLayer(nn.Module):
 
